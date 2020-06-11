@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colors</title>
+
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <h2>Color Representation and Gradients</h2>
+  <div id="subtitle">Part 1: RGB and HSL</div>
+
+  <p>This is a discussion about forming gradients through color spaces, a gradient being a smooth transition between two colors. RGB and HSL will be the focus, but much will be able to be extrapolated to other spaces. In part 1 we define the RGB and HSL color space. In part 2 we discuss what a gradient is and how to define it mathematically. In part 3, as a bit of fun, we will define an alternative way of forming gradients in HSL space.</p>
+
+  <h3>Contents</h3>
+
+  <h4 id="current">Part 1: RGB and HSL</h4>
+
+  <ol>
+    <li><a href="#spaces">Representing Colors</a></li>
+    <li><a href="#hsl">Defining HSL</a></li>
+    <li><a href="#derive">Deriving HSL</a>
+      <ul>
+        <li><a href="#hue">Hue</a></li>
+        <li><a href="#saturation">Saturation</a></li>
+        <li><a href="#lightness">Lightness</a></li>
+      </ul>
+    </li>
+  </ol>
+
+  <h4><a href="./part2.html">Part 2: Gradients</a></h4>
+
+  <ol>
+    <li><a href="./part2.html#paths">What a Gradient Is</a></li>
+    <li>
+      <a href="./part2.html#problems">Difficulties with HSL Paths</a>
+      <ul>
+        <li><a href="./part2.html#grayscale">Non-unique Grayscale Colors</a></li>
+        <li><a href="./part2.html#periodicity">The Periodicity of Hue</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="./part2.html#fixes">Fixing HSL Paths</a>
+      <ul>
+        <li><a href="./part2.html#grayscaleFix">Fixing Grayscale Colors</a></li>
+        <li><a href="./part2.html#hueFix">Fixing Hue</a></li>
+      </ul>
+    </li>
+  </ol>
+
+  <h4><a href="./part3.html">Part 3: Creating Our Own Gradients</a></h4>
+
+  <ol>
+    <li><a href="./part3.html#idea">The Idea</a></li>
+    <li><a href="./part3.html#derivation">The Derivation</a></li>
+    <li><a href="./part3.html#paths">Creating Paths</a></li>
+    <li><a href="./part3.html#implementation">The Implementation</a></li>
+  </ol>
+
+  <hr>
+
+  <h3 id="spaces">Representing Colors</h3>
+
+  <p>Colors can be defined in many ways. For computers the most common way to define color is with RGB, which defines every color in terms of its composition of red, green, and blue. Hex codes are merely an alternative respresentation of what is ultimately RGB. For example, <code class='h29518d'>#29518d</code> represents <code class="h29518d">rgb(41, 81, 141)</code>, as <code>29</code>, <code>51</code>, and <code>8d</code> in hex are 41, 81, and 141 in decimal, respectively.</p>
+
+  <p>The next most common representation is HSL, which expresses a color as a combination of hue, saturation, and lightness. One of the immediate problems with HSL is that it relies on aspects of light that are fundamentally subjective; saturation especially is much more about the way humans experience color than any intrinsic properties of color. We will explore this more when we define HSL representation in terms of RGB.</p>
+
+  <p>RGB and HSL are both examples of <em>color spaces</em>. Color spaces are so called because they give each color a coordinate, just how each point in a physical space can be given a coordinate. RGB can be thought of as a cube with R, G, and B being the x, y, and z coordinates.</p>
+
+  <img src="https://upload.wikimedia.org/wikipedia/commons/d/d6/RGB_color_cube.svg" alt="RGB cube" width="100%">
+
+  <p>Though there are many other representations of color, such as HSB and CIELAB, here we will focus on RGB and HSL.</p>
+
+  <h3 id="hsl">Defining HSL</h3>
+
+  <p>In the HSL color space, each color is given a hue, saturation, and lightness coordinate. Instead of representing this as a rectangle, as in RGB space, HSL is best represented as a cylinder, where hue determines the angle, saturation the distance from the center, and lightness the distance from the bottom.</p>
+
+  <img src="https://upload.wikimedia.org/wikipedia/commons/3/35/HSL_color_solid_cylinder.png" alt="HSL cylinder" width="40%" style='float:right'>
+
+  <p>In RGB each of the values has a range of [0, 255], while in most implementations of HSL hue has a range of [0, 360) (being an angle), and saturation and lightness both have a range of [0, 100] (being percents). For our purposes however we will consider hue, saturations, and lightness as all having a range from 0 to 1, as this simplifies the math a bit.</p>
+
+  <p>One important thing to notice about HSL is that it, unlike RGB, does not give a unique representation to certain colors. When lightness is 1 the color is white regardless of what hue and saturation are. Likewise, a lightness of 0 always produces black. In addition, whenever saturation is 0 the color will be gray, and only lightness will affect the shade with hue playing no role. This lack of uniqueness will come up again when we try to define gradients involving these colors.</p>
+
+  <p>The actual derivations of the hue, saturation, and lightness are complex, but we will go through them and see why they are sensible.</p>
+
+  <h3 id="derive">Deriving HSL</h3>
+
+  <p>We will be deriving hue, saturation, and lightness (denoted <code>H</code>, <code>S</code>, and <code>L</code>) from an RGB color (red, green, and blue will be denoted <code>R</code>, <code>G</code>, and <code>B</code>). We will be using <code class="h22e0d0">rgb(34, 224, 208)</code> as our example color. Before going into the derivations we will do three things:</p>
+
+  <ol>
+    <li>We will normalize the RGB colors by dividing each by 255, their max value. For our color this produces the following:</li>
+    <ul>
+      <li><code>R = .1<span style="text-decoration: overline;">3</span></code></li>
+      <li><code>G = .8784314</code></li>
+      <li><code>B = .8156863</code></li>
+    </ul>
+
+    <li>We will define <code>max</code> and <code>min</code> as the maximum and minimum of <code>R</code>, <code>G</code>, and <code>B</code>. For our color this would mean</li>
+    <ul>
+      <li><code>max = G = .8784314</code></li>
+      <li><code>min = R = .1<span style="text-decoration: overline;">3</span></code></li>
+    </ul>
+
+    <li>We will define <code>sum</code> and <code>dif</code> as the sum and difference of <code>max</code> and <code>min</code>. This yields</li>
+    <ul>
+      <li><code>sum = max + min = .8784314 + .1<span style="text-decoration: overline;">3</span> = 1.0117647</code></li>
+      <li><code>dif = max - min = .8784314 - .1<span style="text-decoration: overline;">3</span> = 0.7450980</code></li>
+    </ul>
+  </ol>
+
+  <p>With that done the derivations will be simpler.</p>
+
+  <h4 id="hue">Hue</h4>
+
+  <p>To find hue <code>H</code> we perform the following:</p>
+
+  <ol>
+    <li>if <code>max = min</code>, then <code>H</code> is undefined. Otherwise,</li>
+    <li>we define <code>H'</code> according to the following:
+      <ol>
+        <li>if <code>R = max</code>, then <code>H' = 0 + (G - B) / dif</code>.</li>
+        <li>if <code>G = max</code>, then <code>H' = 2 + (B - R) / dif</code>.</li>
+        <li>if <code>B = max</code>, then <code>H' = 4 + (R - G) / dif</code>.</li>
+      </ol>
+    </li>
+    <li>if <code>H' < 0</code>, then <code>H = H' / 6 + 1</code>. Otherwise, <code>H = H' / 6</code>.</li>
+  </ol>
+
+  <p>The reasoning behind step 1 is that if <code>max = min</code> then <code>R = G = B</code>. This would make a shade of gray, for which hue is irrelevant. In many implementations hue is simply set to 0 in this case.</p>
+
+  <p>In step 2, note that the fraction used in defining <code>H'</code> will always be less than one. This is because <code>max</code> is missing from the numerator, while being present in the numerator (<code>dif = max - min</code>). Given that the numerator can be positive or negative the range of values of this fraction is [-1, 1]. Because this range has a size of two, we seperate each of the three possibilities by 2 (the 0, 2, and 4 in the equations for red, green, and blue). This makes it so <code>H'</code> has a range of [-1, 1] if <code>R = max</code>, [1, 3] if <code>G = max</code>, and [3, 5] if <code>B = max</code>. Thus, <code>H'</code> has a range of [-1, 5], which has a size of 6. We want our value for <code>H</code> to be between 0 and 1, which is why we divide <code>H'</code> by 6, adding 1 if <code>H'</code> is negative.</p>
+
+  <p>Pure red is made to be 0 degrees, so that <code class="hff0000">hsl(0, 1, .5)</code> (100% saturated with 50% brightness) equals <code class="hff0000">rgb(255, 0, 0)</code>. This is an arbitrary choice, as any color could have been chosen for 0 degrees, but in this case red was chosen. In addition to this, a pure green has a hue of 1/3 (120 degrees), and pure blue has a hue of 2/3 (240 degrees).</p>
+
+  <p>Given this it should make sense as to why, when calculating <code>H'</code>, we take the dominant color, <code>max</code>, and calculate the difference between the other two colors as the numerator. In this numerator one color is subtracted from the other. To make sense of which color is the one subtracted it is best to go through an example:</p>
+
+  <p>If we have <code class="h287850">rgb(40, 120, 80)</code>, our calculation would be <code>2 + (80 - 40)/80 = 2.5</code>, which would then get divided by 6 in step 3, yielding a hue of .41<span style="text-decoration: overline;">6</span>. In degrees this hue would be 150, which is 30 degrees closer to pure blue (located at 240 degrees) than is pure green (located at 120 degrees). Because blue has a greater hue than green and red has a smaller hue (in terms of degrees), we add blue and subtract red when green is the dominant color.</p>
+
+  <p>Going through these calculations for our example color of <code class="h22e0d0">rgb(34, 224, 208)</code> results in the following:</p>
+
+  <ol>
+    <li>We see that <code>max</code> does not equal <code>min</code>, so we go to step 2.</li>
+    <li><code>G = max</code>, so <code>H' = 2 + (B - R) / dif = 2 + (.8156863 - .1<span style="text-decoration: overline;">3</span>) / .745098 = 2.9157896</code>.</li>
+    <li>We see that <code>H'</code> is positive, so <code>H = H' / 6 = 2.9157896 / 6 = .4859649</code>.</li>
+  </ol>
+
+  <p>So we have determined that the hue for <code class="h22e0d0">rgb(34, 224, 208)</code> is .4859649.</p>
+
+  <h4 id="saturation">Saturation</h4>
+
+  <p>Saturation <code>S</code> is defined as follows:</p>
+
+  <ol>
+    <li>If <code>dif = 0</code>, then <code>S = 0</code>. Otherwise,</li>
+    <li>define <code>D</code> by the follwing:
+      <ol>
+        <li>if <code>sum < 1</code>, then <code>D = sum</code>. Otherwise,</li>
+        <li><code>D = 2 - sum</code>.</li>
+      </ol>
+    </li>
+    <li><code>S = dif / D</code></li>
+  </ol>
+
+  <p>Step 1 follows much the same logic as step 1 for hue. If <code>min = max</code> then the color is gray, so there is no saturation. This step would not be necessary (it would be handled by step 3) save for the edge cases where <code>sum = 0</code> or <code>sum = 2</code> (in both these cases <code>dif</code> would equal 0), which would cause division by 0.</p>
+
+  <p>For step 2, note that <code>sum</code> has a range of [0, 2], so <code>D</code> is the distance of <code>sum</code> to its nearest extreme.</p>
+
+  <p>In step 3 we take <code>dif</code> and scale it into the interval [0, 1]. <code>D</code> places an upper bound on <code>dif</code>, and so accomplishes this scaling. Doing this is intended to mirror our notion of what saturation is: how colorful a color is relative to its brightness. <code>dif</code>, being equal to <code>max - min</code>, describes how colorful something is by measuring how far away the maximum and minimum channels of RGB are, as the closer these channels are the more gray a color is. <code>D</code> can be though of as a way to measure brightness.</p>
+
+  <p>How well this definition aligns with our perception of saturation is questionable, and the HSL model is generally agreed to have failed in this regard, but nevertheless it acts as a decent approximation. Consider these shades of blue, however:</p>
+
+  <ol>
+    <li><code style="background-color: hsl(200, 90%, 50%); color:white">hsl(.55, .9, .5)</code></li>
+    <li><code style="background-color: hsl(240, 80%, 50%); color:white">hsl(.66, .8, .5)</code></li>
+    <li><code style="background-color: hsl(200, 40%, 50%); color:white">hsl(.55, .5, .5)</code></li>
+    <li><code style="background-color: hsl(240, 40%, 50%); color:white">hsl(.66, .4, .5)</code></li>
+  </ol>
+
+  <p>To me, shade 2 seems more saturated than shade 1, but I think we can all agree that 1 and 2 are more saturated than 3 and 4.</p>
+
+  <p>This example is meant to show that HSL is not a perfect model, but that it is a working model.</p>
+
+  <p>For our example color we see that</p>
+
+  <ol>
+    <li><code>dif</code> does not equal 0, so</li>
+    <li><code>sum > 1</code>, so <code>D = 2 - sum = 2 - 1.0117647 = .9882353</code></li>
+    <li><code>S = dif / D = .745098 / .9882353 = .7539683</code>.</li>
+  </ol>
+
+  <p>Thus we have determined that the saturation for <code class="h22e0d0">rgb(34, 224, 208)</code> is .7539683.</p>
+
+  <h4 id="lightness">Lightness</h4>
+
+  <p>Lightness is defined as simply <code>sum / 2</code>, the average of <code>max</code> and <code>min</code>. This is certainly the most immediately appealing to intuition.</p>
+
+  <p>For our example color this would mean that <code>L = 1.0117647 / 2 = .5058824</code>.</p>
+
+  <p>And with that we determine that the HSL representation of <code class="h22e0d0">rgb(34, 224, 208)</code> is <code class="h22e0d0">hsl(.4859649, .7539683, .5058824)</code>.</p>
+
+  <p>In CSS the hue value would be multiplied by 360, and the saturation and lightness would be multiplied by 100 with a percent sign affixed, yielding <code style="background-color:hsl(175,75%,51%);color:black;">hsl(175, 75%, 51%)</code> (after rounding).</p>
+
+  <hr>
+
+  <p>The mathematically inclined will notice that the transformations from RGB to HSL are not linear transformations, and thus straight-line paths in RGB will not be preserved. This will be the motivation behind the construction of gradients in these spaces.</p>
+
+  <footer><a href="./part2.html">Part 2 ></a></footer>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colors</title>
+
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <h2>Color Representation and Gradients</h2>
+  <div id="subtitle">Part 2: Gradients</div>
+
+  <p>In this part we will begin our discussion of gradients, and how they are produced differently in different color spaces.</p>
+
+  <h3>Contents</h3>
+
+  <h4><a href="./index.html">Part 1: RGB and HSL</a></h4>
+
+  <ol>
+    <li><a href="./index.html#spaces">Representing Colors</a></li>
+    <li><a href="./index.html#hsl">Defining HSL</a></li>
+    <li><a href="./index.html#derive">Deriving HSL</a>
+      <ul>
+        <li><a href="./index.html#hue">Hue</a></li>
+        <li><a href="./index.html#saturation">Saturation</a></li>
+        <li><a href="./index.html#lightness">Lightness</a></li>
+      </ul>
+    </li>
+  </ol>
+
+  <h4 id="current">Part 2: Gradients</h4>
+
+  <ol>
+    <li><a href="#paths">What a Gradient Is</a></li>
+    <li>
+      <a href="#problems">Difficulties with HSL Paths</a>
+      <ul>
+        <li><a href="#grayscale">Non-unique Grayscale Colors</a></li>
+        <li><a href="#periodicity">The Periodicity of Hue</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#fixes">Fixing HSL Paths</a>
+      <ul>
+        <li><a href="#grayscaleFix">Fixing Grayscale Colors</a></li>
+        <li><a href="#hueFix">Fixing Hue</a></li>
+      </ul>
+    </li>
+  </ol>
+
+  <h4><a href="./part3.html">Part 3: Creating Our Own Gradients</a></h4>
+
+  <ol>
+    <li><a href="./part3.html#idea">The Idea</a></li>
+    <li><a href="./part3.html#derivation">The Derivation</a></li>
+    <li><a href="./part3.html#paths">Creating Paths</a></li>
+    <li><a href="./part3.html#implementation">The Implementation</a></li>
+  </ol>
+
+  <hr>
+
+  <h3 id="paths">What a Gradient Is</h3>
+
+  <p>A gradient is a path through a color space. Just as a line segment can go from (128, 53, 82) to (28, 117, 87) in 3 dimensional space, so to can a color go between <code class="h803552">rgb(128, 53, 82)</code> and <code class="h1c7557">rgb(28, 117, 87)</code> in RGB space. The way this is accomplished in RGB space is relatively straightforward:</p>
+
+  <ol>
+    <li>Take the difference in the R, G, and B channels.</li>
+    <li>Divide each by the number of pixels the gradient goes through.</li>
+    <li>Add these values to the R, G, and B channels for each subsequent line in the gradient.</li>
+  </ol>
+
+  <p>It's best to illustrate this with an example. Let's say we have <code>p</code> pixels, then taking the colors mentioned above we would do the following:</p>
+
+  <ol>
+    <li><code>(28, 117, 87) - (128, 53, 82) = (-100, 64, 5)</code></li>
+    <li><code>(-100 / p, 64 / p, 5 / p)</code></li>
+    <li>Give the nth line of the gradient an RGB value of <code>(128 - 100n / p, 53 + 64n / p, 82 + 5n / p)</code></li>
+  </ol>
+
+  <div id="fig1"></div>
+
+  <p>Once we have done these steps we can make a gradient like the one above. This gradient is formed by having each horizontal line of pixels be equal to the one before it, but with the R, G, and B values being increased by <code>(-100 / p, 64 / p, 5 / p)</code>.</p>
+
+  <p>Some will recognize this process as that of finding points on a line in three dimensional space using the vector form of a line. If you are not such a person I hope that it still makes sense as to why it works.</p>
+
+  <p>This is only a path in RGB space, however. A path between the same colors in HSL space using the same method would produce the following:</p>
+
+  <canvas id="fig2"></canvas>
+
+  <p>This is accomplished by a practically identital process, the only difference being that in step 1 we take the difference of the H, S, and L values of the colors instead of the R, G, and B values.</p>
+
+  <p>If we are tracing a path in RGB space between two colors with the same amount of red, then every color in the gradient will have that amount of red. Likewise, in HSL space, if we're tracing a path between two colors with the same saturation every color in the resulting gradient will have that saturation; this will produce gradients that are uniformly colorful, and avoid the gray band that is present in many RGB gradients. It can be seen why this might be a desirable property for certain gradients in certain contexts.</p>
+
+  <p>The process described above, where we appropriate the strategy for making RGB gradients for making HSL gradients, while operational, has several undesirable properties, which we will now explore.</p>
+
+  <h3 id="problems">Difficulties with HSL Paths</h3>
+
+  <p>The two main aspects of HSL that cause difficulties in defining gradients are</p>
+
+  <ol>
+    <li>The non-unique representations of grayscale colors</li>
+    <li>The periodic nature of hue</li>
+  </ol>
+
+  <p>We'll breifly touch on what these mean before going on to how to fix them.</p>
+
+  <h4 id="grayscale">Non-Unique Grayscale Colors</h4>
+
+  <p>The first aspect affects any gradient that goes either to or from a grayscale color. Even though <code class='h808080'>hsl(0, 0, .5)</code> and <code class='h808080'>hsl(.9, 0, .5)</code> are the same color, computing a gradient from them to <code class='hff0099'>hsl(.9, 1, .5)</code> using the method outlined for RGB colors would result in very different gradients: <code class='h808080'>hsl(0, 0, .5)</code> to <code class='hff0099'>hsl(.9, 1, .5)</code> would result in the computation of a traversal from 0 to .9 in the H channel, while a similar computation for <code class='h808080'>hsl(.9, 0, .5)</code> to <code class='hff0099'>hsl(.9, 1, .5)</code> would maintain the same hue throughout the gradient. We can see the difference below:</p>
+
+  <h5>hsl(0, 0, .5) to hsl(.9, 1, .5)</h5>
+  <canvas id="fig3"></canvas>
+
+  <h5>hsl(.9, 0, .5) to hsl(.9, 1, .5)</h5>
+  <canvas id="fig4"></canvas>
+
+  <p>This problem is worse for black and white. While a gradient involving gray is caused by hue not being unique, black and white also have the saturation lacking uniqueness. This means that there can be many gradients from black or white to a given color, some of which will traverse about a wide range of hues and saturations and others that will not change in hue or saturation at all. A gradient from black to white could go through any color whatsoever, depending on the accidentals of how it is represented in HSL.</p>
+
+  <h4 id="periodicity">The Periodicity of Hue</h4>
+
+  <p>The problem with hue is that it is intended, as in the cylinder model, to be periodic, yet we represent hue on an interval ([0, 1) in our case), which is linear. Thus, a path from a color with hue <code>0</code> to a hue of <code>.99</code> would go all the way around the rainbow of hues, when it would be more desirable for it to wrap around. Consider, for example, the following gradient generated by the procedure described above:</p>
+
+  <h5>rgb(255, 0, 0) to rgb(255, 0, 1) in HSL</h5>
+  <canvas id="fig5"></canvas>
+
+  <p>Even though the only difference in the colors was 1 unit of blue, the naive method used needlessly produces every hue there is. This is obviously not a desirable feature, but it is something we can fix.</p>
+
+  <h3 id="fixes">Fixing HSL Paths</h3>
+
+  <p>Fixing the problems with grayscale colors is easier, so we will start with that before we go on to solve the problems with hue.</p>
+
+  <h4 id="grayscaleFix">Fixing Grayscale Colors</h4>
+
+  <p>The problem with grayscale colors is that they don't have unique hues, and in the case of black and white they also lack unique saturations. To solve this all we need is some pre-processing: we set the hue of the gray equal to whatever other color defines our gradient, and then employ the same method as before. For black and white we would also set saturations equal. This provides a unique path from any grayscale color to any other color, with the added benefit that it is the shortest path between them in HSL space.</p>
+
+  <p>As an example, we might consider the path between <code class='h808080'>hsl(0, 0, .5)</code> and <code class='hff0099'>hsl(.9, 1, .5)</code> that proved difficult for the naive method to handle. With this fix we would simply look at the two colors, see that one of them is gray, and set its hue, <code>0</code> in this case, equal to the hue of the other color, <code>.9</code>. This would produce the same gradient as that between <code class='h808080'>hsl(.9, 0, .5)</code> and <code class='hff0099'>hsl(.9, 1, .5)</code> illustrated earlier.</p>
+
+  <h4 id="hueFix">Fixing Hue</h4>
+
+  <p>The problem with hue demands a solution slightly more complicated than the fix for grayscale colors.</p>
+
+  <p>First, we can notice that given two colors, the problem with hue only presents itself when the positive difference between the hues of our colors exceeds .5. If this condition is met we then take that difference <code>D'</code> and compute the distance in hue as <code>D = 1 - D'</code>. We then either decrement or add to the hue of our first color <code>D'</code>, adding or subtracting 1 when the value for hue leaves [0, 1]. Put succinctly, this procedure would look like this:</p>
+
+  <ol>
+    <li>Let <code>D'</code> equal the positive difference in the hues of our colors. If <code>D' > .5</code>, then</li>
+    <li>Let <code>D = 1 - D'</code>.</li>
+    <li>Let <code>C = D / p</code>, where <code>p</code> is the number of pixels.</li>
+    <li>If the hue of the first color is less than the hue of the second, increment by <code>C</code>, otherwise, decrement by <code>C</code></li>
+    <li>If the computed hue becomes negative, add 1. If it exceeds 1, subtract 1.</li>
+  </ol>
+
+  <p>This procedure accomplishes our goal of 'wrapping around' the HSL cylinder.</p>
+
+  <p>As an illustration of this fix we can consider the path between <code class="hff0000">rgb(255, 0, 0)</code> and <code class="hff0000">rgb(255, 0, 1)</code> mentioned above. With this it would look like this:</p>
+
+  <div id="fig6"></div>
+
+  <p>Hardly a gradient, but for these two colors that is precisely the desired behavior.</p>
+
+  <p>The only undesirable property of HSL paths now is that if the difference in hue goes from .5 to .51 a completely different path will be calculated, but this is unavoidable.</p>
+
+  <p>With these issues addressed, we now have a fully functional method for creating paths in HSL space.</p>
+
+  <hr>
+
+  <p>You can see the result of these paths yourself in the space below, where a gradient in both RGB and HSL space will appear:</p>
+
+  <input type="color" id="one" name="head" value="#ffffff">
+  <label for="head">Top Color</label>
+
+  <input type="color" id="two" name="body" value="#ffffff">
+  <label for="body">Bottom Color</label>
+
+  <h3>RGB</h3>
+  <div id="gradient"></div>
+
+  <h3>HSL</h3>
+  <canvas id="canvas"></canvas>
+
+  <p>In part 3, just as a bit of fun, we will create another way to form gradients in a sort of quasi-HSL space. Be forewarned, however, it will involve a bit of math.</p>
+
+  <footer><a href="./part3.html">Part 3 ></a></footer>
+
+  <script src="./scripts/HSLtoHEX.js"></script>
+  <script src="./scripts/HEXtoHSL.js"></script>
+  <script src="./scripts/getPaths.js"></script>
+  <script src="./scripts/drawCanvas.js"></script>
+  <script src="./scripts/main.js"></script>
+  <script src="./scripts/mainPart2.js"></script>
+</body>

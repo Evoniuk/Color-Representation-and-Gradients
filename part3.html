@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colors</title>
+
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <h2>Color Representation and Gradients</h2>
+  <div id="subtitle">Part 3: Creating Our Own Gradients</div>
+
+  <p>In this part we will create for ourselves another way to form gradients.</p>
+
+  <h3>Contents</h3>
+
+  <h4><a href="./index.html">Part 1: RGB and HSL</a></h4>
+
+  <ol>
+    <li><a href="./index.html#spaces">Representing Colors</a></li>
+    <li><a href="./index.html#hsl">Defining HSL</a></li>
+    <li><a href="./index.html#derive">Deriving HSL</a>
+      <ul>
+        <li><a href="./index.html#hue">Hue</a></li>
+        <li><a href="./index.html#saturation">Saturation</a></li>
+        <li><a href="./index.html#lightness">Lightness</a></li>
+      </ul>
+    </li>
+  </ol>
+
+  <h4><a href="./part2.html">Part 2: Gradients</a></h4>
+
+  <ol>
+    <li><a href="./part2.html#paths">What a Gradient Is</a></li>
+    <li>
+      <a href="./part2.html#problems">Difficulties with HSL Paths</a>
+      <ul>
+        <li><a href="./part2.html#grayscale">Non-unique Grayscale Colors</a></li>
+        <li><a href="./part2.html#periodicity">The Periodicity of Hue</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="">Fixing HSL Paths</a>
+      <ul>
+        <li><a href="./part2.html#grayscaleFix">Fixing Grayscale Colors</a></li>
+        <li><a href="./part2.html#hueFix">Fixing Hue</a></li>
+      </ul>
+    </li>
+  </ol>
+
+  <h4 id="current">Part 3: Creating Our Own Gradients</h4>
+
+  <ol>
+    <li><a href="#idea">The Idea</a></li>
+    <li><a href="#derivation">The Derivation</a></li>
+    <li><a href="#paths">Creating Paths</a></li>
+    <li><a href="#implementation">The Implementation</a></li>
+  </ol>
+
+  <hr>
+
+  <h3 id="idea">The Idea</h3>
+
+  <p>The general idea of our new way of forming gradients is to take straight-line paths in the HSL cylinder. The gradients we went over in part 2 would form <a href="https://en.wikipedia.org/wiki/Archimedean_spiral">Archimedean spirals</a> in the HSL cylinder, but our new gradient will be simple straight lines through the cylinder.</p>
+
+  <p>Despite lines being more geometrically simple, the way HSL is represented lends itself more naturally to spiral gradients, so we will have to convert the representation of HSL into a more traditional representation using three orthogonal (perpenicular) coordinates. We will call this representation XYZ space, because we are very creative.</p>
+
+  <h3 id="derivation">The Derivation</h3>
+
+  <p>In the cylindrical model for HSL, hue represents the angle, saturation the radius, and lightness the height of a point in the cylinder. We will impose a rectangular coordinate system with the following conditions:</p>
+
+  <ul>
+    <li>The center of the bottom of the cylinder will be the origin.</li>
+    <li>The direction defined by a hue of 0 will be the positive <code>x</code> direction.</li>
+    <li>The direction defined by a hue of 1/4 will be the positive <code>y</code> direction.</li>
+    <li>The direction defined by saturation will be the positive <code>z</code> direction.</li>
+  </ul>
+
+  <p>From these definitions quite simple derivations for XYZ space emerge (at least, if you recall your trigonometry). They are as follows:</p>
+
+  <ul>
+    <li><code>x = s * cos(2πh)</code></li>
+    <li><code>y = s * sin(2πh)</code></li>
+    <li><code>z = l</code></li>
+  </ul>
+
+  <p>Now that we have derived actual numbers to represent our space, we can now create a method to compute paths in it.</p>
+
+  <h3 id="paths">Creating Paths</h3>
+
+  <p>Fortunately, the work has already been done. Our new space is rectangular, so it doesn't have the same problems as HSL with periodicity or non-unique representations. Rather, the method used to compute paths in RGB space works perfectly for this new space, so we can simply adopt it without modification.</p>
+
+  <p>To actually implement this there is one more thing we have to do, however. XYZ space will obviously not have any support in CSS or anywhere else, so after we compute paths in XYZ we will then need to re-convert the points into HSL. We could also convert it into RGB, but this would be quite difficult.</p>
+
+  <p>To do this, we use the following formulae for saturation and lightness:</p>
+
+  <ul>
+    <li><code>s = sqrt(x**2 + y**2)</code></li>
+    <li><code>l = z</code></li>
+  </ul>
+
+  <p>Where <code>sqrt</code> is the square-root function.</p>
+
+  <p>For hue we can use <code>h = arctan(y / x) / 2π</code>, but this will map hue to the interval (-.5, .5). To deal with negative values, we simply add 1 to <code>h</code> if <code>h < 0</code>.</p>
+
+  <p>This allows to actually implement our path using CSS.</p>
+
+  <h3 id="implementation">The Implementation</h3>
+
+  <p>Here you can see all the various gradients side by side:</p>
+
+  <input type="color" id="one" name="head" value="#ffffff">
+  <label for="head">Top Color</label>
+
+  <input type="color" id="two" name="body" value="#ffffff">
+  <label for="body">Bottom Color</label>
+
+  <h3>RGB</h3>
+  <div id="gradient"></div>
+
+  <h3>HSL</h3>
+  <canvas id="canvas"></canvas>
+
+  <h3>XYZ</h3>
+  <canvas id ="xyz"></canvas>
+
+  <footer></footer>
+
+  <script src="./scripts/HSLtoHEX.js"></script>
+  <script src="./scripts/HEXtoHSL.js"></script>
+  <script src="./scripts/HSLtoXYZ.js"></script>
+  <script src="./scripts/getPaths.js"></script>
+  <script src="./scripts/drawCanvas.js"></script>
+  <script src="./scripts/main.js"></script>
+  <script src="./scripts/mainPart3.js"></script>
+</body>
