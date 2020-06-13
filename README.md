@@ -1,7 +1,7 @@
 # Color-Representation-and-Gradients
 This is an article about the representation of colors and creating gradients using such representations. [You can see it here](https://evoniuk.github.io/Color-Representation-and-Gradients/).
 
-## The Creation of the Figures
+### The Creation of the Figures
 
 The creation of the figures is accomplished through four main types of JavaScript files: the main files, the conversion files, the canvas drawing file, and the path creation file.
 
